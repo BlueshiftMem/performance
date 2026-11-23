@@ -1,3 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-55KLB92Z"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>
 <title>BSMC Benchmark Results</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -196,6 +207,8 @@ dl.defs dt:last-of-type,dl.defs dd:last-of-type{border-bottom:0}
 @media (max-width:760px){.tiles{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){.stdbox{grid-template-columns:1fr}.stdn,.stdu{grid-column:1}}
 </style>
+</head>
+<body>
 
 <header class="top"><div class="wrap">
   <div class="brand">BSMC benchmark results <small>BSMC · RISC-V · ARM A72 · Ryzen · 2026-11-19</small></div>
@@ -683,3 +696,6 @@ document.addEventListener("click",e=>{const b=e.target.closest("[data-scale]");i
 document.addEventListener("click",e=>{const b=e.target.closest("[data-mode]");if(!b)return;M=b.dataset.mode;try{localStorage.setItem("bsmc-mode2",M)}catch(_){}show(true)});
 show();
 </script>
+
+</body>
+</html>
