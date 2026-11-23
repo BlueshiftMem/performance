@@ -1,0 +1,656 @@
+<title>BSMC Benchmark Results</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: lab-report pages, sticky task nav, one column of text + full-width charts; platforms carry fixed colors everywhere */
+:root{
+  --bg:#f5f7f8; --surface:#ffffff; --fg:#14202a; --muted:#56656f; --line:#d5dde2; --track:#e7ecef;
+  --bsmc:#1d5fd6; --riscv:#c99300; --a72:#5f9e00; --ryzen:#7d3cc8; --ryzen16:#b896e8;
+  --good:#1f8a4c; --bad:#b8433a; --good-bg:#dcefe3; --bad-bg:#f6dfdc; --good-fg:#1f8a4c; --bad-fg:#b8433a; --neutral-bg:#eef1f3;
+  --f-head:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f161b; --surface:#16212a; --fg:#e4ebef; --muted:#97a6b0; --line:#2b3a45; --track:#22303a;
+  --bsmc:#5b93f5; --riscv:#f2b826; --a72:#95d600; --ryzen:#b57cff; --ryzen16:#7d55b8;
+  --good:#4fbf7c; --bad:#e0766c; --good-bg:#183327; --bad-bg:#3a2220; --good-fg:#5fcf8c; --bad-fg:#ef8a80; --neutral-bg:#1d2a33; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161b; --surface:#16212a; --fg:#e4ebef; --muted:#97a6b0; --line:#2b3a45; --track:#22303a;
+  --bsmc:#5b93f5; --riscv:#f2b826; --a72:#95d600; --ryzen:#b57cff; --ryzen16:#7d55b8;
+  --good:#4fbf7c; --bad:#e0766c; --good-bg:#183327; --bad-bg:#3a2220; --good-fg:#5fcf8c; --bad-fg:#ef8a80; --neutral-bg:#1d2a33; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.55 var(--f-body);font-variant-numeric:tabular-nums}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 56px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top .wrap{padding-block:10px;display:flex;flex-direction:column;gap:8px}
+.brand{font:600 15px/1.2 var(--f-head);letter-spacing:.02em;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.brand small{font:400 12px var(--f-mono);color:var(--muted)}
+nav{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:thin}
+nav a{flex:none;font:500 13px var(--f-body);color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:6px;border:1px solid transparent}
+nav a:hover{color:var(--fg);border-color:var(--line)}
+nav a[aria-current="page"]{color:var(--fg);background:var(--surface);border-color:var(--line)}
+nav a:focus-visible,button:focus-visible{outline:2px solid var(--bsmc);outline-offset:2px}
+h1{font:700 clamp(28px,4.4vw,40px)/1.1 var(--f-head);margin:28px 0 8px;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 22px/1.2 var(--f-head);margin:34px 0 6px;text-wrap:balance}
+h3{font:600 16px/1.3 var(--f-head);margin:0 0 2px;letter-spacing:.01em}
+p{margin:8px 0}
+.lede{font-size:17px;color:var(--fg)}
+.muted{color:var(--muted)}
+.eyebrow{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:24px}
+ul.cons{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
+ul.cons li{padding:8px 12px;border-left:3px solid var(--bsmc);background:var(--surface)}
+ul.cons.auto li{display:flex;flex-wrap:wrap;gap:4px 18px;align-items:baseline}
+ul.cons.auto .ck{font-weight:600;min-width:210px}
+ul.cons.auto .cl{display:flex;flex-wrap:wrap;gap:4px 16px}
+ul.cons.auto .ci{white-space:nowrap}
+ul.cons.auto .gd{color:var(--good-fg);font:600 14px var(--f-mono)}ul.cons.auto .bd{color:var(--bad-fg);font:600 14px var(--f-mono)}
+ul.cons.auto li.neg{display:block}
+ul.cons li.neg{border-left-color:var(--muted)}
+.tag{font:500 11px var(--f-mono);padding:1px 5px;border-radius:4px;background:var(--neutral-bg);color:var(--muted);white-space:nowrap}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);margin:10px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr));gap:16px;margin-top:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 14px 12px;min-width:0}
+.panel .sub{font-size:13px;line-height:1.4;color:var(--muted);margin:0 0 10px;min-height:2.8em}
+.chart{display:grid;gap:7px}
+.row{display:grid;grid-template-columns:minmax(96px,34%) 1fr;gap:8px;align-items:center;min-height:34px}
+.row .lbl{font-size:13px;line-height:1.25;min-width:0}
+.row .lbl b{font-weight:600}
+.track{position:relative;height:22px;background:var(--track);border-radius:3px;overflow:hidden}
+.bar{position:absolute;top:0;bottom:0;left:0;border-radius:3px}
+.val{position:absolute;top:50%;transform:translateY(-50%);font:500 12px var(--f-mono);white-space:nowrap;color:var(--fg);padding:0 5px}
+.tick{position:absolute;top:0;bottom:0;width:1px;background:var(--line);opacity:.9}
+.axis{display:grid;grid-template-columns:minmax(96px,34%) 1fr;gap:8px}
+.axis .scale{position:relative;height:16px;font:400 10.5px var(--f-mono);color:var(--muted)}
+.axis .scale span{position:absolute;transform:translateX(-50%);white-space:nowrap}.axis .scale span:first-child{transform:none}.axis .scale span:last-child{transform:translateX(-100%)}
+.mid{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--muted);left:50%}
+.c-bsmc{background:var(--bsmc)}.c-riscv{background:var(--riscv)}.c-a72{background:var(--a72)}.c-ryzen{background:var(--ryzen)}.c-ryzen16{background:var(--ryzen16)}
+.t-riscv{--tint:var(--riscv)}.t-a72{--tint:var(--a72)}.t-ryzen{--tint:var(--ryzen)}.t-ryzen16{--tint:var(--ryzen16)}.t-bsmc{--tint:var(--bsmc)}
+.panel.tinted{background:color-mix(in srgb,var(--tint) 9%,var(--surface));border-color:color-mix(in srgb,var(--tint) 45%,var(--line))}
+.row.tinted .track,.panel.tinted .track{background:var(--surface)}
+.chart.bands{gap:0}
+.row.tinted{background:color-mix(in srgb,var(--tint) 22%,var(--surface));margin:0 -8px;padding:5px 8px;min-height:44px}
+.chart.bands .row.tinted:first-child{border-radius:6px 6px 0 0}.chart.bands .row.tinted:nth-last-child(2){border-radius:0 0 6px 6px}
+.c-good{background:var(--good)}.c-bad{background:var(--bad)}
+.h2row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:34px 0 6px}
+.h2row h2{margin:0}
+.h2row .mode{margin-left:0}
+.capb{font:500 10.5px var(--f-mono);color:var(--muted);white-space:nowrap}
+.h2row .rgt{margin-left:auto;display:inline-flex;gap:8px;flex-wrap:wrap}.h2row .rgt .mode{margin-left:0}
+.mode{display:inline-flex;border:1px solid var(--line);border-radius:7px;margin-left:auto;position:relative}
+.mode button:first-child{border-radius:6px 0 0 6px}.mode button:last-child{border-radius:0 6px 6px 0}
+.mode button{display:inline-flex;align-items:center}
+.mode button{white-space:nowrap}.mode button .info{color:inherit}
+.info:hover,.info:focus,.info:focus-within{z-index:50}.info .tip{z-index:50}
+@media (max-width:520px){.mode button{padding:5px 6px;font-size:12.5px}.hero{padding:18px 12px 14px}}
+.mode button{font:500 13px var(--f-body);color:var(--muted);background:var(--surface);border:0;padding:5px 12px;cursor:pointer}
+.mode button+button{border-left:1px solid var(--line)}
+.mode button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px;margin-top:14px}
+.grid3 .row{grid-template-columns:44% 1fr}
+.hz{font:500 11px "IBM Plex Mono",monospace;color:var(--muted);white-space:nowrap;margin-left:4px}
+.info{position:relative;display:inline-flex;vertical-align:-1px;margin-left:5px;color:var(--muted);cursor:help;line-height:0}
+.info .tip{display:none;position:absolute;left:-8px;top:calc(100% + 8px);z-index:20;width:max-content;max-width:min(640px,calc(100vw - 32px));background:var(--fg);color:var(--bg);font:400 13px/1.45 var(--f-body);font-style:normal;padding:8px 11px;border-radius:7px;box-shadow:0 6px 20px rgba(0,0,0,.18);text-align:left;white-space:normal}
+.info .tip::before{content:"";position:absolute;left:12px;top:-5px;width:10px;height:10px;background:var(--fg);transform:rotate(45deg)}
+.info:hover .tip,.info:focus .tip,.info:focus-within .tip{display:block}
+.info:hover,.info:focus{color:var(--bsmc);outline:none}
+@media (max-width:620px){h2,h3{position:relative}.info{position:static}.info .tip{left:0;max-width:calc(100vw - 64px)}.info .tip::before{display:none}}
+.info .tip .ln{display:block}.info .tip .ln+.ln{margin-top:3px}
+.info .tip .tag{background:transparent;color:inherit;border:1px solid currentColor}
+.grid3.g4{grid-template-columns:repeat(auto-fit,minmax(min(100%,430px),1fr))}
+.grid3 .lbl a{color:inherit;text-decoration:none}
+.persp{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 6px}
+.persp button{font:500 13px var(--f-body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 11px;cursor:pointer}
+.persp button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tablewrap{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:640px}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{font:500 11.5px var(--f-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.04em;vertical-align:bottom}
+tbody tr:last-child td{border-bottom:0}
+td.h{font-family:var(--f-mono);font-weight:500}
+td.up{background:var(--good-bg);color:var(--good-fg)}
+td.dn{background:var(--bad-bg);color:var(--bad-fg)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:12px;margin-top:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.kpi .n{font:700 30px/1.1 var(--f-head);color:var(--bsmc)}
+.kpi .t{font-size:13px;color:var(--muted);margin-top:4px}
+.note{font-size:13px;color:var(--muted)}
+.view[hidden]{display:none}
+.hero{--h-bg:#0b1318;--h-fg:#e9f1f4;--h-mut:#8fa2ad;--h-line:#22323c;background:var(--h-bg);color:var(--h-fg);border-radius:10px;margin-top:20px;padding:22px 20px 18px;position:relative}
+.hero h1{margin:6px 0 6px;color:var(--h-fg);font-size:clamp(30px,5.6vw,54px);line-height:1.05;text-wrap:balance}
+.hero h1 em{font-style:normal;color:#5b93f5}
+.hero p{color:var(--h-mut)}
+.hero .eyebrow{color:#5b93f5;margin-top:0}
+.race{margin-top:14px}
+.race canvas{display:block;width:100%;height:auto}
+.rctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+.rctl button{font:500 13px var(--f-body);color:var(--h-fg);background:transparent;border:1px solid var(--h-line);border-radius:6px;padding:6px 11px;cursor:pointer}
+.rctl button[aria-pressed="true"]{background:var(--h-fg);color:var(--h-bg);border-color:var(--h-fg)}
+.rctl .mode{border-color:var(--h-line);margin-left:0}.rctl .mode button{border:0;border-radius:0;background:transparent;color:var(--h-mut)}.rctl .mode button+button{border-left:1px solid var(--h-line)}.rctl .mode button[aria-pressed="true"]{background:var(--h-fg);color:var(--h-bg)}
+.rctl .sep{width:1px;height:22px;background:var(--h-line);margin:0 6px}
+.rcap{font:400 13px var(--f-mono);color:var(--h-fg);margin-top:12px;display:grid;gap:6px}
+.rcap div{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline}
+.rcap .rh{color:var(--h-mut);min-width:190px}
+.rcap b{font-family:var(--f-body);font-weight:700}
+footer{margin-top:40px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+@media (max-width:520px){.sz{display:none}.row,.axis{grid-template-columns:92px 1fr}.row .lbl{font-size:12px}}
+@media (prefers-reduced-motion:no-preference){.bar{transition:width .35s ease,left .35s ease}}
+@media (max-width:520px){.hero{padding:18px 12px 14px}.rctl .mode button{padding:5px 6px;font-size:12.5px}}
+@media (max-width:520px){.rcap .rh{flex-basis:100%;min-width:0}}
+
+/* CPU brand names in running text carry their platform colour */
+:root{--tx-riscv:#946c00;--tx-a72:#467600;--tx-ryzen:#6a2fb8}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--tx-riscv:#f2b826;--tx-a72:#95d600;--tx-ryzen:#c49bff}}
+:root[data-theme="dark"]{--tx-riscv:#f2b826;--tx-a72:#95d600;--tx-ryzen:#c49bff}
+.br{font-weight:600}.br-riscv{color:var(--tx-riscv)}.br-a72{color:var(--tx-a72)}.br-ryzen{color:var(--tx-ryzen)}
+.hero .br-riscv{color:#f2b826}.hero .br-a72{color:#95d600}.hero .br-ryzen{color:#c49bff}
+.info .tip .br-riscv{color:#f2b826}.info .tip .br-a72{color:#95d600}.info .tip .br-ryzen{color:#c49bff}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .info .tip .br-riscv{color:#946c00}:root:not([data-theme="light"]) .info .tip .br-a72{color:#467600}:root:not([data-theme="light"]) .info .tip .br-ryzen{color:#6a2fb8}}
+:root[data-theme="dark"] .info .tip .br-riscv{color:#946c00}:root[data-theme="dark"] .info .tip .br-a72{color:#467600}:root[data-theme="dark"] .info .tip .br-ryzen{color:#6a2fb8}
+.specs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:12px;margin-top:12px}
+.spec .spec-h{display:flex;justify-content:space-between;align-items:baseline;gap:6px 14px;flex-wrap:wrap;border-bottom:1px solid color-mix(in srgb,var(--tint) 35%,var(--line));padding-bottom:8px;margin-bottom:8px}
+.spec h3{font-size:18px;margin:0}
+.spec-c{font:600 18px var(--f-mono);text-align:right}.spec-c small{display:block;font:400 11.5px var(--f-mono);color:var(--muted)}
+.spec ul{margin:0;padding-left:18px;font-size:14px}.spec li+li{margin-top:2px}
+dl.defs{display:grid;grid-template-columns:max-content 1fr;gap:0;margin:12px 0;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+dl.defs dt,dl.defs dd{margin:0;padding:10px 14px;border-bottom:1px solid var(--line)}
+dl.defs dt{font-weight:600;white-space:nowrap}
+dl.defs dt:last-of-type,dl.defs dd:last-of-type{border-bottom:0}
+@media (max-width:560px){dl.defs{grid-template-columns:1fr}dl.defs dt{border-bottom:0;padding-bottom:0}}
+.stdbox{margin:14px 0 4px;padding:10px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;display:grid;grid-template-columns:max-content 1fr;gap:2px 14px;align-items:baseline}
+.stdk{font:500 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stdv{font:500 14px var(--f-mono)}.stdv a{color:var(--bsmc);text-decoration:underline;text-underline-offset:2px}
+.stdu{grid-column:2;font-size:14px;margin-top:4px}.stdu a{color:var(--bsmc)}
+.stdn{grid-column:2;font-size:13px;color:var(--muted)}
+.stat{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 10px;margin:6px 0 8px}.sn{font:700 34px var(--f-head);color:var(--bsmc);line-height:1}.su{font:600 18px var(--f-head)}.sd{font-size:13px;color:var(--muted)}.sd a{color:var(--bsmc)}
+.hB{margin:12px 0 6px}.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:6px}
+.tile{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-top:3px solid var(--bsmc);border-radius:8px;background:var(--surface);color:var(--fg);text-decoration:none}
+.tile:hover{border-color:var(--bsmc)}.tn{font:600 16px var(--f-head)}.tk{font:500 11px var(--f-mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}.td{font-size:13px;line-height:1.4;margin-top:4px}.ts{font-size:12px;color:var(--bsmc);margin-top:auto;padding-top:6px}
+@media (max-width:760px){.tiles{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.stdbox{grid-template-columns:1fr}.stdn,.stdu{grid-column:1}}
+</style>
+
+<header class="top"><div class="wrap">
+  <div class="brand">BSMC benchmark results <small>BSMC · RISC-V · ARM A72 · Ryzen · 2026-11-19</small></div>
+  <nav id="nav" aria-label="Pages"></nav>
+</div></header>
+
+<main class="wrap" id="main"></main>
+
+<script>
+/* ---------- platform metadata ---------- */
+const P={
+  bsmc:{n:"BSMC",mhz:50,c:"bsmc"},
+  riscv:{n:"RISC-V",mhz:50,c:"riscv"},
+  a72:{n:"ARM A72",mhz:1400,c:"a72"},
+  ryzen:{n:"Ryzen (1 core)",mhz:5500,c:"ryzen"},
+  ryzen16:{n:"Ryzen (16 cores)",mhz:5500,c:"ryzen16"}
+};
+const ORD=["bsmc","riscv","a72","ryzen","ryzen16"];
+const byOrd=rows=>rows.slice().sort((a,b)=>ORD.indexOf(a[0])-ORD.indexOf(b[0]));
+// every visit starts in per-clock view with a linear scale
+let S="lin";
+let M="clk";
+let CUR=null; // task shown now; a task may set its own common clock (clk, MHz) and memory (mem)
+const clkOf=()=>CUR&&CUR.clk||GHZ;
+const memOf=()=>CUR&&CUR.mem||"DDR5";
+const ghzTxt=()=>(clkOf()/1000).toLocaleString("en-US",{maximumFractionDigits:1})+" GHz";
+const GHZ=5500; // common clock for the per-clock views
+const DDR5="Measured cap of the Ryzen's DDR5 memory: 684 M cache lines/s random, 54-70 GB/s sequential.";
+let Y=3; // Yonder count: 3 measured, 5 and 10 computed
+const RAND=new Set(["redis","kereses","bfs","remap","embedding"]);
+const YK=()=>Y/3;
+const nf=(v,d)=>{if(v==null)return"–";const a=Math.abs(v);if(d==null)d=a>=10?0:a>=1?1:Math.max(1,1-Math.floor(Math.log10(a)));return v.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:d})};
+const xr=x=>x>=3?nf(Math.round(x),0):nf(x,1);
+const xf=v=>v>=1?xr(v)+"x":Math.round(1/v)<=1?"1x":"1/"+nf(Math.round(1/v),0);
+const okx=v=>v>=1||xf(v)==="1x"; // a value shown as 1x is never red
+
+/* ---------- task data (all [M] unless noted) ----------
+   rows: [platform, value, label-suffix]; unit is per-second throughput */
+const T=[
+ {id:"masolas",use:'The classic memory-bandwidth benchmark: <a href="https://www.amd.com/en/developer/zen-software-studio/applications/spack/stream-benchmark.html" target="_blank" rel="noopener">AMD</a>, <a href="https://www.intel.com/content/www/us/en/developer/articles/technical/optimizing-memory-bandwidth-on-stream-triad.html" target="_blank" rel="noopener">Intel</a> and <a href="https://nvidia.github.io/grace-cpu-benchmarking-guide/foundations/STREAM/index.html" target="_blank" rel="noopener">NVIDIA</a> all use it to measure memory bandwidth.',nav:"Copy",title:"Copy, fill, STREAM",
+  what:"Sequential copy (STREAM COPY) and fill (FILL) of a large memory region, plus the STREAM kernels. This is raw memory bandwidth, with sequential reads and writes.",
+  std:'glibc memcpy/memset; <a href="https://www.cs.virginia.edu/stream/" target="_blank" rel="noopener">stream.c (McCalpin)</a>',
+  sets:[
+   {key:"STREAM COPY",ysc:1,cap:70,unit:"GB/s",perClk:"bytes/clock",rows:[["riscv",0.021,"libc"],["bsmc",20.65,"",100],["a72",9.98,"libc"],["ryzen",49.4,"AVX2"],["ryzen16",52.6,"AVX2"]]},
+   {key:"FILL",ysc:1,cap:56,unit:"GB/s",perClk:"bytes/clock",rows:[["riscv",0.025,"optimized"],["bsmc",18.85,"",100],["a72",8.96,"libc"],["ryzen",28.7,"libc"],["ryzen16",55.7,"AVX2"]]},
+   {key:"STREAM TRIAD",cap:70,unit:"GB/s",perClk:"bytes/clock",rows:[["riscv",0.0163,"naive"],["bsmc",2.66,"data movement only"],["a72",6.36,"NEON"],["ryzen",48.3,"AVX2"],["ryzen16",51.7,"AVX2"]]}
+  ],
+  note:"CPUs ship a dedicated <b>hardware prefetcher</b> for this pattern: vendors know that <b>data access is the bottleneck</b>. But the prefetcher is <b>built for simple, predictable access patterns</b>; it cannot help with complex data access. <b>Even the simplest BSMC configuration handles 4-dimensional traversal</b>, and it covers complex data access as well."},
+ {id:"bejaras",use:'Its Python package alone has been <a href="https://pepy.tech/projects/opencv-python" target="_blank" rel="noopener">downloaded more than 1.2 billion times</a> (PyPI).',nav:"Strided",title:"Strided and tiled reads",
+  what:"What happens when the next item is not the adjacent one? A 512 MB table with a cold cache, read sequentially, with strides from 64 B to 64 KB, and in 64×64 tiles.",
+  std:'<a href="https://opencv.org/" target="_blank" rel="noopener">OpenCV</a> transpose / ROI copy, strided copy',
+  sets:[
+   {ysc:1,key:"4 KB stride (4 B elements)",cap:684,unit:"M elements/s",perClk:"elements/clock",rows:[["riscv",2.9,"std"],["bsmc",128,"",100],["a72",45,"std"],["ryzen",95.5,"std"],["ryzen16",309,"optimized"]]},
+   {ysc:1,key:"64 KB+4 stride (4 B elements)",cap:684,unit:"M elements/s",perClk:"elements/clock",rows:[["riscv",2.7,"std"],["bsmc",25.2,"",100],["a72",11.5,"std"],["ryzen",161,"optimized"],["ryzen16",495,"optimized"]]},
+   {ysc:1,key:"64×64 tile",cap:13500,unit:"M elements/s",perClk:"elements/clock",rows:[["riscv",2.5,"naive"],["bsmc",1015,"",100],["a72",346,"NEON"],["ryzen",2926,"optimized"],["ryzen16",4443,"optimized"]]},
+   {ysc:1,key:"Sequential read (baseline)",cap:13500,unit:"M elements/s",perClk:"elements/clock",rows:[["riscv",3.0,"std"],["bsmc",2492,"",100],["a72",1890,"NEON"],["ryzen",11080,"AVX"],["ryzen16",10753,"AVX"]]}
+  ],
+  note:"With strided reads the CPU prefetcher cannot follow the pattern, and throughput drops to a fraction. The 100 MHz version of the BSMC is <b>faster than a 1.4 GHz A72 core in every case</b>: <b>1.3x</b> for sequential reads, <b>1.5-2.8x</b> with strides and <b>2.9x</b> on tiles.",
+  custom:()=>{
+    // case, BSMC, RISC-V best, A72 best, Ryzen 1 core best (M elements/s)
+    const C=[["Sequential",2492,3.0,1890,11080,10753],["64 B stride",186,3.0,123,801,811],["256 B stride",161,3.1,67,237,744],["4 KB stride",128,2.9,45,96,309],["64 KB+4 stride",25.2,2.7,11.5,161,495],["64 B items, 4 KB stride",86.4,0.2,31.6,120,333],["64 B items, 64 KB+4 stride",17.9,0.2,7.6,54,195],["64×64 tile",1015,2.5,346,2926,4443]];
+    const L=c=>`<b>${c[0]}</b>`;
+    const mhz=[100,50,1400,5500,5500];
+    const CAPC=[13500,684,684,684,684,684,684,13500];
+    const at=(c,j)=>(j===1&&M==="ideal"?c[j]*YK():c[j])*GHZ/mhz[j-1];
+    const rat=(c,j)=>{const cap=CAPC[C.indexOf(c)];if(M==="abs")return c[1]/c[j];if(M==="ideal")return at(c,1)/(j===5?16*at(c,4):at(c,j));return Math.min(at(c,1),Math.max(cap,c[1]))/Math.min(at(c,j),Math.max(cap,c[j]))};
+    let h=`${H2("All cases: BSMC vs CPUs",`Green: BSMC ahead. Red: CPU ahead.`)}<div class="grid3 g4">`;
+    h+=[["riscv","RISC-V",2],["a72","ARM A72",3],["ryzen","Ryzen (1 core)",4],["ryzen16","Ryzen (16 cores)",5]].map(([k,n,j])=>`<div class="panel tinted t-${k}"><h3><i class="sw c-${k}"></i> vs ${n}${hz(k)}</h3>${divBars(C.map(c=>({label:L(c),v:rat(c,j)})),{span:3})}</div>`).join("");
+    h+=`</div>`;
+    return h;
+  },
+  },
+ {id:"embedding",use:'Meta (Facebook) <a href="https://engineering.fb.com/2018/11/07/ml-applications/fbgemm/" target="_blank" rel="noopener">runs it at scale in production services</a>.',nav:"Embedding",title:"Embedding lookup (random row gather)",
+  what:"Gathering random rows from a 10-million-row table (128-byte rows). This is the core of embedding lookups in recommender systems (DLRM) and language models.",
+  std:'<a href="https://docs.pytorch.org/FBGEMM/" target="_blank" rel="noopener">FBGEMM</a> EmbeddingSpMDM_ref (<a href="https://pytorch.org/" target="_blank" rel="noopener">PyTorch</a> embedding_bag)',
+  sets:[
+   {key:"GATHER, 128 B rows",cap:342,unit:"M rows/s",perClk:"rows/clock",rows:[["riscv",0.0745,"FBGEMM"],["bsmc",52.9,"",100],["a72",15.1,"NEON"],["ryzen",72.9,"FBGEMM"],["ryzen16",222.5,"AVX2"]]}
+  ],
+  note:["<b>Absolute:</b> the ARM A72 with the BSMC <b>gathers 3.5x faster</b> than on its own with the best NEON code (52.9 vs 15.1 M rows/s), and <b>6.5x</b> faster than the standard FBGEMM code (8.2 M rows/s).","<b>Per clock, with the DDR5 cap:</b> the BSMC <b>gathers 5x more rows than a Ryzen core</b> and <b>6x more than an A72 core</b>."],
+  },
+ {id:"remap",use:'Its Python package alone has been <a href="https://pepy.tech/projects/opencv-python" target="_blank" rel="noopener">downloaded more than 1.2 billion times</a> (PyPI).',nav:"Remap",title:"Remap (lens distortion correction)",clk:1400,mem:"LPDDR4",
+  clkInfo:"All platforms at 1.4 GHz, the ARM A72 clock, with the board's LPDDR4 memory [C]. Measured throughput is scaled linearly to 1.4 GHz, capped at the board memory limit (3 memories, ~450 M random reads/s).",
+  idealInfo:"All platforms at 1.4 GHz, the ARM A72 clock, with no memory cap [C]: only the number of requests counts.",
+  what:"Lens distortion correction (remap): every output pixel reads four neighbours at positions given by a lookup table. Full HD frames, with a random map and a fisheye map.",
+  std:'<a href="https://www.amd.com/en/developer/resources/technical-articles/2026/faster-perception-for-physical-ai.html" target="_blank" rel="noopener">OpenCV</a> remapBilinear',
+  sets:[
+   {key:"Remap, random map",cap:225,unit:"M pixels/s",perClk:"pixels/clock",rows:[["riscv",0.44,"OpenCV"],["bsmc",101,"",100],["a72",17.4,"NEON"]]},
+   {key:"Remap, fisheye",cap:3900,unit:"M pixels/s",perClk:"pixels/clock",rows:[["riscv",0.46,"OpenCV"],["bsmc",63.1,"gather"],["a72",76.0,"NEON"]]}
+  ],
+  note:["Camera pipelines run on <b>embedded ARM and RISC-V</b> (automotive, robotics, drones).","With a random map, the 100 MHz version of the BSMC is <b>5.8x faster than a 1.4 GHz A72 core</b>: the A72 slows to a quarter of its speed, while <b>BSMC throughput is independent of the access pattern</b>."]},
+ {id:"kereses",use:'<a href="https://db-engines.com/en/ranking/key-value+store" target="_blank" rel="noopener">No. 1 key-value store</a> in the DB-Engines ranking (of 72 systems, September 2026).',nav:"Hash, tree",title:"Hash lookup and tree search",
+  what:"Key lookup in a 512 MB hash table and in a B+ tree (2^24 keys). Every lookup is a random memory read; a tree search is a chain of dependent reads.",
+  std:'<a href="https://redis.io/" target="_blank" rel="noopener">Redis 7.2.6</a> dictFind (SipHash), <a href="https://redis.io/docs/latest/develop/data-types/sorted-sets/" target="_blank" rel="noopener">Redis ZSET skip list</a>',
+  sets:[
+   {key:"Hash lookup",cap:684,unit:"M lookups/s",perClk:"lookups/clock",rows:[["riscv",0.724,"naive"],["bsmc",80.1,"gather"],["a72",21.5,"NEON"],["ryzen",113.7,"AVX2"],["ryzen16",624.8,"AVX2"]]},
+   {key:"Tree search (B+ tree) [E]",cap:456,unit:"M lookups/s",perClk:"lookups/clock",rows:[["riscv",0.0707,"naive"],["bsmc",56.3,"gather, estimate [E]"],["a72",6.63,"NEON"],["ryzen",43.3,"AVX2"],["ryzen16",435.9,"AVX2"]]}
+  ],
+  note:["<b>Competitive in absolute terms:</b> in hash lookup, the 50 MHz version of the BSMC reaches <b>70% of a 5.5 GHz Ryzen core</b> (80 vs 114 M lookups/s) at a <b>110x lower clock</b>.","In hash lookup, the 50 MHz version of the BSMC is <b>3.7x faster than a 1.4 GHz ARM A72 core</b> (80 vs 21.5 M lookups/s)."],
+  
+  },
+ {id:"bfs",use:'NVIDIA calls it <a href="https://nvidia.github.io/grace-cpu-benchmarking-guide/benchmarks/GAP_BS_BFS/index.html" target="_blank" rel="noopener">a standard for graph-processing performance evaluation</a>.',nav:"BFS",title:"Graph traversal (BFS)",
+  what:"Breadth-first search on a random graph with 4-8 million vertices and 33-67 million edges. Every step is a random read of adjacency lists.",
+  std:'<a href="https://arxiv.org/abs/1508.03619" target="_blank" rel="noopener">GAP Benchmark Suite</a>, DOBFS (direction-optimizing BFS)',
+  sets:[
+   {key:"BFS",cap:684,unit:"M edges/s",perClk:"edges/clock",rows:[["riscv",1.17,"GAP"],["bsmc",65.5,"gather"],["a72",29.6,"GAP"],["ryzen",380.2,"GAP"]]}
+  ],
+  note:"The 50 MHz version of the BSMC is <b>2.2x faster than a 1.4 GHz ARM A72 core</b> (65.5 vs 29.6 M edges/s)."},
+ {id:"redis",use:'<a href="https://db-engines.com/en/ranking/key-value+store" target="_blank" rel="noopener">No. 1 key-value store</a> in the DB-Engines ranking (of 72 systems, September 2026).',nav:"Redis GET",title:"Redis GET",
+  what:"The memory path of the Redis GET command, without networking: bucket, entry, key, value. That is four dependent random reads per request, on a Redis 7.2.6 keyspace.",
+  std:'<a href="https://redis.io/" target="_blank" rel="noopener">Redis 7.2.6</a> lookupKeyRead → dictFind → addReplyBulk',
+  sets:[
+   {key:"Redis GET",cap:171,unit:"M GET/s",perClk:"GET/clock",rows:[["riscv",0.019,"Redis"],["bsmc",3.0,"Redis",100],["a72",1.20,"Redis"],["ryzen",3.95,"Redis"],["ryzen16",49.4,"Redis"]]},
+   {key:"Optimized store",cap:342,unit:"M GET/s",perClk:"GET/clock",rows:[["riscv",0.025,"custom store"],["bsmc",8.8,"compact store"],["a72",3.95,"NEON"],["ryzen",19.9,"AVX2"],["ryzen16",211.3,"AVX2"]]}
+  ],
+  note:["<b>Close behind a Ryzen core:</b> 3.0 vs 3.95 M GET/s. The 100 MHz version of the BSMC with LPDDR4 memory, the Ryzen core at 5.5 GHz with DDR5.","Four dependent reads per GET: <b>the BSMC's strongest ground</b>."],
+  },
+ {id:"tf",use:'According to Google, <a href="https://developers.google.com/edge/litert" target="_blank" rel="noopener">more than 250,000 apps and billions of users</a> rely on it (LiteRT, formerly TensorFlow Lite).',nav:"TF CNN",title:"TF CNN (image recognition)",
+  what:"The two int8 convolutions of the TensorFlow MNIST model, with the model's own weights and 10 images. The output is bit-exact with TensorFlow Lite Micro.",
+  std:'<a href="https://developers.google.com/edge/litert/microcontrollers/overview" target="_blank" rel="noopener">TensorFlow Lite Micro</a> ConvPerChannel',
+  sets:[
+   {key:"TFLM code",unit:"frames/s",perClk:"frames/M clocks",scale:1e6,rows:[["riscv",5.4,"TFLM"],["bsmc",30.0,"RISC-V + BSMC"]]},
+   {key:"Best code",unit:"frames/s",perClk:"frames/M clocks",scale:1e6,rows:[["riscv",6.4,"naive"],["bsmc",30.0,"RISC-V + BSMC"]]}
+  ],
+  note:["A full frame on the RISC-V runs <b>5.6x faster</b> with the BSMC.","Here the BSMC gathers the data and the test board's CPU does the arithmetic. Frames/s therefore reflects the <b>limit of the test interconnect</b>, not BSMC performance. With the compute unit attached directly to the BSMC (integration), computation receives data at BSMC speed."]}
+];
+
+/* per-clock and ratio helpers */
+const perClk=(set,r)=>{const p=P[r[0]];if(!p.mhz)return null;const s=set.scale||1;return set.unit==="GB/s"? r[1]*1000/p.mhz : r[1]/p.mhz*(s===1?1:s)/ (s===1?1:1e6)};
+// for M/s units: value(M/s)/MHz = per clock; for frames/s with scale 1e6: fps/(MHz*1e6)*1e6 = fps/MHz per M clocks
+function perClock(set,r){const p=P[r[0]];if(!p.mhz)return null;if(set.unit==="GB/s")return r[1]*1000/p.mhz; if(set.scale)return r[1]/p.mhz; return r[1]/p.mhz;}
+const bsmcOf=set=>{const b=set.rows.find(r=>r[0]==="bsmc");return b?b[1]:null};
+
+/* ---------- chart builders ---------- */
+function logBars(rows,{unit,fmt}={}){
+  const vals=rows.map(r=>r.v).filter(v=>v>0);
+  const NA=`<span class="val" style="left:0">no single clock for 16 cores</span>`;
+  let lo=Math.floor(Math.log10(Math.min(...vals))), hi=Math.ceil(Math.log10(Math.max(...vals)));
+  if(hi===lo)hi++;
+  const vmax=Math.max(...vals);
+  const pos=S==="lin"?v=>v/vmax*100:v=>(Math.log10(v)-lo)/(hi-lo)*100;
+  let ticks="";
+  if(S==="lin"){for(let q=0;q<=4;q++)ticks+=`<i class="tick" style="left:${q*25}%"></i>`}
+  else{for(let e=lo;e<=hi;e++)ticks+=`<i class="tick" style="left:${pos(10**e)}%"></i>`}
+  let h=`<div class="chart bands">`;
+  for(const r of rows){
+    if(r.v==null){h+=`<div class="row tinted t-${r.c}"><div class="lbl">${r.label}</div><div class="track">${ticks}${NA}</div></div>`;continue}
+    const w=Math.max(pos(r.v),0.8), txt=(fmt||nf)(r.v)+(unit?" "+unit:"");
+    const inside=w>50;
+    h+=`<div class="row tinted t-${r.c}"><div class="lbl">${r.label}</div><div class="track">${ticks}<div class="bar c-${r.c}" style="width:${w}%"></div><span class="val" style="${inside?`right:${100-w}%;color:#fff`:`left:${w}%`}">${txt}</span></div></div>`;
+  }
+  let sc="";
+  if(S==="lin"){sc=`<span style="left:0%">0</span><span style="left:50%;transform:translateX(-50%)">${nf(vmax/2)}</span><span style="left:100%">${nf(vmax)}</span>`}
+  else{for(let e=lo;e<=hi;e++)sc+=`<span style="left:${pos(10**e)}%">${nf(10**e,Math.max(0,-e))}</span>`}
+  h+=`<div class="axis"><div></div><div class="scale">${sc}</div></div></div>`;
+  return h;
+}
+/* diverging log bars around 1x: >1 BSMC ahead (right, good), <1 behind (left, bad) */
+function divBars(rows,{span=3}={}){
+  const rr=rows.filter(r=>r.v!=null&&r.v>0).map(r=>Math.max(r.v,1/r.v)),R=Math.max(2,...rr);
+  const pos=S==="lin"?v=>50+(v>=1?1:-1)*(Math.max(v,1/v)-1)/(R-1)*50:v=>50+Math.max(-1,Math.min(1,Math.log10(v)/span))*50;
+  let ticks="";
+  if(S==="lin"){for(let q=0;q<=4;q++)ticks+=`<i class="tick" style="left:${q*25}%"></i>`}
+  else{for(let e=-span;e<=span;e++)ticks+=`<i class="tick" style="left:${50+e/span*50}%"></i>`}
+  let h=`<div class="chart${rows.some(r=>r.c)?" bands":""}">`;
+  for(const r of rows){
+    if(r.ref){h+=`<div class="row${r.c?" tinted t-"+r.c:""}"><div class="lbl">${r.label}</div><div class="track">${ticks}<i class="mid"></i><span class="val" style="left:50%">baseline</span></div></div>`;continue}
+    if(r.v==null){h+=`<div class="row${r.c?" tinted t-"+r.c:""}"><div class="lbl">${r.label}</div><div class="track">${ticks}<span class="val" style="left:50%">–</span></div></div>`;continue}
+    const p=pos(r.v), good=r.v>=1, l=good?50:p, w=Math.max(Math.abs(p-50),0.6);
+    const lab=good?(p>78?`<span class="val" style="right:${100-p}%;color:#fff">${xf(r.v)}</span>`:`<span class="val" style="left:${p}%">${xf(r.v)}</span>`):(p<22?`<span class="val" style="left:${p}%;color:#fff">${xf(r.v)}</span>`:`<span class="val" style="right:${100-p}%">${xf(r.v)}</span>`);
+    h+=`<div class="row${r.c?" tinted t-"+r.c:""}"><div class="lbl">${r.label}</div><div class="track">${ticks}<i class="mid"></i><div class="bar ${okx(r.v)?"c-good":"c-bad"}" style="left:${l}%;width:${w}%"></div>${lab}</div></div>`;
+  }
+  let sc="";
+  if(S==="lin"){sc=`<span style="left:0%">1/${nf(Math.round(R),0)}</span><span style="left:50%;transform:translateX(-50%)">1x</span><span style="left:100%">${nf(Math.round(R),0)}x</span>`}
+  else for(const e of [-2,0,2]){if(Math.abs(e)>span)continue;const v=10**e;sc+=`<span style="left:${50+e/span*50}%;transform:translateX(-50%)">${e===0?"1x":e>0?nf(v)+"x":"1/"+nf(1/v)}</span>`}
+  h+=`<div class="axis"><div></div><div class="scale">${sc}</div></div></div>`;
+  return h;
+}
+const legend=keys=>`<div class="legend">${keys.map(k=>`<span><i class="sw c-${P[k].c}"></i>${P[k].n}</span>`).join("")}</div>`;
+const HZ={bsmc:"50 MHz",riscv:"50 MHz",a72:"1.4 GHz",ryzen:"5.5 GHz",ryzen16:"5.5 GHz"};
+const hz=k=>M==="abs"&&HZ[k]?` <span class="hz">${HZ[k]}</span>`:"";
+const lbl=(r)=>{const sub=M==="ideal"&&r[0]==="ryzen16"?"16 × 1 core [C]":r[2];return `<b>${P[r[0]].n}</b>${r[3]&&M==="abs"?` <span class="hz">${r[3]} MHz</span>`:hz(r[0])}${sub?`<br><span class="muted">${sub}</span>`:""}`};
+
+/* ---------- overview summary matrix ---------- */
+const SUM0=[
+ // task, nav id, vs RISC-V, abs vs A72, abs vs Ryzen1, abs vs Ryzen16, clk vs A72, clk vs Ryzen1, BSMC value, DDR5 cap (same unit)
+ ["Redis GET","redis",158,2.5,0.76,0.061,35,42,3.0,171],
+ ["Hash lookup","kereses",110,3.7,0.70,0.13,104,78,80.1,684],
+ ["Tree search [E]","kereses",796,8.5,1.30,0.129,238,143,56.3,456],
+ ["BFS","bfs",56,2.2,0.17,null,62,19,65.5,684],
+ ["Remap, random","remap",230,5.8,null,null,81.3,null,101,342],
+ ["Remap, fisheye","remap",137,0.83,null,null,23,null,63.1,6000],
+ ["Embedding","embedding",710,3.5,0.73,0.24,49,40.4,52.9,342],
+ ["STREAM COPY","masolas",983,2.07,0.42,0.39,29,23.3,20.65,70,"y"],
+ ["FILL","masolas",754,2.10,0.66,0.34,29.5,36.6,18.85,56,"y"],
+ ["STREAM TRIAD","masolas",163,0.42,0.055,0.0515,12,6.1,2.66,70],
+ ["4 KB stride","bejaras",44,2.84,1.34,0.414,39.8,74.6,128,684,"y"],
+ ["64×64 tile","bejaras",406,2.93,0.347,0.228,41.1,19.3,1015,13500,"y"],
+ ["TF CNN","tf",5.6,null,null,null,null,null,null,null]
+];
+const SUMY=()=>SUMB.map(x=>(RAND.has(x[1])||(x[10]==="y"&&M==="ideal"))&&Y!==3?x.map((v,i)=>i>=2&&i<=8&&v!=null?v*YK():v):x);
+// columns [vs RISC-V, vs A72, vs Ryzen 1, vs Ryzen 16] in the current view
+function sumCols(x){
+  if(M==="abs")return [x[2],x[3],x[4],x[5]];
+  if(M==="ideal")return [x[2],x[6],x[7],x[7]==null?null:x[7]/16];
+  if(x[8]==null)return [x[2],null,null,null];
+  const f=Math.min(GHZ/50,x[9]/x[8]);
+  return [x[2]*f/(GHZ/50),x[3]==null?null:x[3]*f*1400/GHZ,x[4]==null?null:x[4]*f,x[5]==null?null:x[5]*f];
+}
+const SUMB=SUM0.map(x=>{const y=x.slice();if(y[7]!=null)y[7]=y[7]*5500/5569;return y});
+/* ---------- pages ---------- */
+function overview(){
+  let h=`<section class="hero"><div class="eyebrow">BSMC · 50-100 MHz · measured</div>
+  <h1>At 100 MHz, <em>keeping pace with a <span style="white-space:nowrap">5.5&nbsp;GHz</span> Ryzen core</em></h1>
+  <p>Each dot is a completed data request: the denser the lane, the more data the platform receives per second. “Absolute” shows measured speed. “Per clock” runs every platform at 5.5 GHz, capped by the Ryzen's DDR5 memory.</p>
+  <div class="race"><canvas id="race" width="900" height="260" aria-label="Request flow per platform"></canvas></div>
+  <div class="rctl" role="group" aria-label="Race settings">
+   ${Object.keys(RACE).map((k,i)=>`<button type="button" data-rt="${k}" aria-pressed="${i===0}">${RACE[k].n}</button>`).join("")}
+   <span class="sep"></span>${SW()}<span class="sep"></span>${YC()}
+  </div>
+  <div class="rcap" id="rcap"></div></section>
+  <p class="lede" style="margin-top:22px">We measured typical memory-bound workloads on RISC-V, ARM A72 and Ryzen CPUs, with the same code and data everywhere. For this test the BSMC runs on an FPGA at 50 or 100 MHz (marked on each bar); as a chip (ASIC) it runs at a much higher clock. The measurements used just <b>three 64 KB Yonder® SmartCache</b> units (192 KB in total; the Ryzen's L3 cache is 64 MB, ~340x more). Every number is measured on hardware, except where <span class="tag">[E]</span> marks an estimate.</p>
+  <div class="kpis">
+   <div class="kpi"><div class="n">56-983x</div><div class="t">faster data movement than the RISC-V CPU on the same board</div></div>
+   <div class="kpi"><div class="n">2-6x</div><div class="t">faster than a 1.4 GHz ARM A72 core at random access with the BSMC (Redis, hash, BFS, remap, embedding)</div></div>
+   <div class="kpi"><div class="n">3 vs 4</div><div class="t">M GET/s: the <b>100 MHz version</b> of the BSMC close behind a 5.5 GHz Ryzen core in Redis GET</div></div>
+   <div class="kpi"><div class="n">6-78x</div><div class="t">more work per clock than a Ryzen core (no memory cap); the largest gains are in pointer-chasing workloads</div></div>
+  </div>
+  ${H2("BSMC vs CPUs",`BSMC divided by the platform. Green: BSMC ahead. Red: CPU ahead. Clocks: BSMC 50 or 100 MHz (marked on each bar), RISC-V 50 MHz, ARM A72 1.4 GHz, Ryzen (1 and 16 cores) 5.5 GHz (measured: 5.57 and 5.41 GHz). The factor shows how many such CPUs one BSMC replaces at the same clock; the 16-core Ryzen is the whole chip.`)}
+  <div class="grid3 g4">${[["riscv","RISC-V",0],["a72","ARM A72",1],["ryzen","Ryzen (1 core)",2],["ryzen16","Ryzen (16 cores)",3]].map(([k,n,ci])=>`<div class="panel tinted t-${k}"><h3><i class="sw c-${k}"></i> vs ${n}${hz(k)}</h3>${divBars(SUMY().map(x=>({label:`<a href="#${x[1]}"><b>${x[0]}</b></a>`,v:sumCols(x)[ci]})),{span:3,compact:true})}</div>`).join("")}</div>
+  ${H2("All factors in one table",`BSMC divided by the platform. Green: BSMC faster. Red: slower. Click a workload for details.`)}
+  <div class="tablewrap"><table><thead><tr><th>Workload</th><th>RISC-V${hz("riscv")}</th><th>ARM A72${hz("a72")}</th><th>Ryzen (1 core)${hz("ryzen")}</th><th>Ryzen (16 cores)${hz("ryzen16")}</th></tr></thead><tbody>
+  ${SUMY().map(x=>{const cols=sumCols(x);return `<tr><td><a href="#${x[1]}">${x[0]}</a></td>${cols.map((v,j)=>v==null?(x[1]==="remap"&&j>=2?`<td class="h muted" style="font-size:12px;font-family:var(--f-body)">runs on mobile devices</td>`:`<td class="h muted">–</td>`):cell(v)).join("")}</tr>`}).join("")}
+  </tbody></table></div>
+  <h2>What it means</h2>
+  <ul class="cons">
+   <li>Where the work is a chain of dependent random memory reads (Redis, hash, graph), the BSMC is <b>2.2-3.7x faster than an A72 core in absolute terms</b>. Already at 100 MHz with LPDDR4 memory, it <b>takes on a 5.5 GHz Ryzen core with DDR5</b>: 3 vs 4 M GET/s in Redis GET, and <b>70%</b> of it in hash lookup.</li>
+   <li>Per clock, the BSMC does <b>6-78x</b> more work than a single Ryzen core. At the same clock (ASIC), this becomes an absolute advantage.</li>
+   <li>With strided and tiled reads, the 100 MHz version of the BSMC is <b>faster than the A72 in every case</b> in absolute terms (1.3-2.9x), and at a 4 KB stride <b>faster than a 5.5 GHz Ryzen core too</b> (128 vs 96 M elements/s).</li>
+  </ul>`;
+  return h;
+}
+const cell=v=>{const t=Math.min(1,Math.abs(Math.log10(v))/2.5),k=okx(v)?"good":"bad",p=Math.round(12+60*t);return `<td class="h" style="background:color-mix(in srgb,var(--${k}) ${p}%,var(--surface));color:${p>45?"#fff":`var(--${k}-fg)`}">${xf(v)}</td>`};
+const MODEINFO={abs:"Measured throughput per second. Each platform runs at its own clock: BSMC 50 or 100 MHz (marked on each bar), RISC-V 50 MHz, ARM A72 1.4 GHz, Ryzen (1 and 16 cores) 5.5 GHz.",clk:"All platforms at 5.5 GHz with the Ryzen's DDR5 memory [C]. Measured throughput is scaled linearly to 5.5 GHz, but the scaled value cannot exceed the measured memory cap. Results that were already faster from cache keep their measured value. "+DDR5+" The 16-core Ryzen is the whole chip.",ideal:"All platforms at 5.5 GHz with no memory cap (e.g. with HBM): only the number of requests counts [C]. The Ryzen (16 cores) is then 16 × single-core throughput. The BSMC starts from its measured LPDDR4 value."};
+const SW=()=>`<span class="mode" role="group" aria-label="View">${[["abs","Absolute"],["clk","Per clock"],["ideal","No memory cap"]].map(([k,n])=>`<button type="button" data-mode="${k}" aria-pressed="${M===k}">${n}${INFO(k==="clk"&&CUR&&CUR.clkInfo?CUR.clkInfo:k==="ideal"&&CUR&&CUR.idealInfo?CUR.idealInfo:MODEINFO[k])}</button>`).join("")}</span>`;
+const SC=()=>`<span class="mode scale" role="group" aria-label="Scale"><button type="button" data-scale="lin" aria-pressed="${S==="lin"}">Linear</button><button type="button" data-scale="log" aria-pressed="${S==="log"}">Logarithmic</button></span>`;
+const INFO=t=>`<span class="info" tabindex="0" role="button" aria-label="Explanation"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="currentColor" opacity=".16"/><circle cx="8" cy="4.6" r="1.15" fill="currentColor"/><rect x="7" y="6.9" width="2" height="5.4" rx="1" fill="currentColor"/></svg><span class="tip" role="tooltip">${t}</span></span>`;
+const YINFO="3 Yonder® SmartCache units: measured. 5 and 10: calculated [C]. For random access, measured throughput scales linearly with the number of Yonders (1 Yonder 40, 3 Yonders 120 M reads/s). At 50 MHz, 10 Yonders give ~400 M reads/s, still below the cap of the board's three memories (~450 M/s). The calculated values apply to random-access workloads (Redis, hash, tree, BFS, remap, embedding); sequential workloads and TF CNN are unchanged.";
+const YC=()=>`<span class="mode ycnt" role="group" aria-label="Number of Yonders">${[3,5,10].map(n=>`<button type="button" data-y="${n}" aria-pressed="${Y===n}">${n} Yonders${n===3?INFO(YINFO):""}</button>`).join("")}</span>`;
+const H2=(t,tip)=>`<div class="h2row">${SW()}<h2>${t}${tip?" "+INFO(tip):""}</h2><span class="rgt">${YC()}${SC()}</span></div>`;
+const modeTxt=()=>M==="abs"?"Absolute: measured throughput per second.":"Per clock: throughput divided by clock (BSMC 50 or 100 MHz, RISC-V 50 MHz, A72 1.4 GHz, Ryzen 5.5 GHz)."
+const MODEN={get abs(){return "at measured speed, each at its own clock"},get clk(){return CUR&&CUR.clk?`at the ARM A72 clock (${ghzTxt()}), with ${memOf()} cap`:`per clock at ${ghzTxt()}, with ${memOf()} cap`},get ideal(){return `at ${ghzTxt()}, no memory cap`}};
+function consList(t){
+  const li=t.sets.map(s0=>{const {rows,val,b}=mk(t,s0);if(!b)return "";const bv=val(b);
+    const it=rows.filter(r=>r[0]!=="bsmc").map(r=>{const v=val(r);if(v==null)return "";const x=bv/v;return `<span class="ci"><b>${P[r[0]].n}</b> <span class="${okx(x)?"gd":"bd"}">${xf(x)}</span></span>`}).join("");
+    return `<li><span class="ck">${s0.key}</span><span class="cl">${it}</span></li>`}).join("");
+  return `<ul class="cons auto">${t.note?[].concat(t.note).map(n=>`<li class="neg">${n}</li>`).join(""):""}</ul>`;
+}
+function mk(t,s0){
+    const rows=byOrd(s0.rows).map(r=>r[0]==="bsmc"&&(RAND.has(t.id)||(s0.ysc&&M==="ideal"))&&Y!==3?[r[0],r[1]*YK(),(r[2]?r[2]+", ":"")+Y+" Yonders [C]",r[3]]:r);
+    const r1=rows.find(r=>r[0]==="ryzen");
+    const v55=r=>r[1]*clkOf()/(r[3]||P[r[0]].mhz);
+    const capd=r=>M==="clk"&&s0.cap&&v55(r)>Math.max(s0.cap,r[1]);
+    const val=r=>M==="abs"?r[1]:M==="ideal"?(r[0]==="ryzen16"?(r1?16*v55(r1):null):v55(r)):(capd(r)?Math.max(s0.cap,r[1]):v55(r));
+    const lb=r=>lbl(r)+(capd(r)?` <span class="capb">${memOf()} cap</span>`:"");
+    const b=rows.find(r=>r[0]==="bsmc");
+    return {rows,val,lb,b};
+}
+const APPS={"masolas": [["Netflix", "video streaming", "Each server streams 400 Gb/s of video; memory speed sets the limit.", "https://papers.freebsd.org/2021/eurobsdcon/gallatin-netflix-freebsd-400gbps/", "Netflix"], ["ChatGPT-style AI", "text generation", "For every word it writes, it reads the whole model from memory.", "https://developer.nvidia.com/blog/mastering-llm-techniques-inference-optimization/", "NVIDIA"], ["Video games", "loading", "Levels and textures are moved in fast, which also loads the CPU.", "https://www.pcgamer.com/in-addition-to-fast-load-times-microsofts-directstorage-can-free-up-your-cpu-while-gaming/", "PC Gamer"], ["Weather", "forecasting", "Supercomputers move huge grids of atmospheric data.", "https://www.ecmwf.int/node/29141", "ECMWF"], ["Supercomputers", "memory benchmark", "Memory speed is measured worldwide with STREAM.", "https://www.cs.virginia.edu/stream/", "STREAM"]], "bejaras": [["Photos", "JPEG", "Every photo is compressed in 8x8 pixel blocks.", "https://www.freecodecamp.org/news/how-jpg-works-a4dbd2316f35/", "freeCodeCamp"], ["YouTube, Netflix", "video", "Video frames are encoded in blocks (AV1).", "https://aomedia.org/docs/AV1_ToolDescription_v11-clean.pdf", "AOMedia"], ["CT and MRI", "medical imaging", "Doctors slice the 3D scan from the side and from above.", "https://pubs.rsna.org/doi/10.1148/rg.255055044", "RSNA"], ["Maps", "satellite imagery", "Map and satellite images are assembled from tiles.", "https://developers.google.com/maps/documentation/javascript/coordinates", "Google Maps"], ["Phones", "image recognition", "Image windows are read out one by one for recognition.", "https://artificial-intelligence.sites.arm.com/computelibrary/v52.4.0/conv2d_heuristic.xhtml", "Arm"]], "embedding": [["YouTube", "recommendations", "“Recommended for you” comes from the videos you watched.", "https://research.google/pubs/deep-neural-networks-for-youtube-recommendations/", "Google Research"], ["TikTok", "For You feed", "Learns in real time from what you watch.", "https://ar5iv.labs.arxiv.org/html/2209.07663", "ByteDance"], ["Instagram, Facebook", "Reels, feed", "Recommendations gather from huge tables in the same way.", "https://arxiv.org/pdf/1906.00091", "Meta"], ["Netflix", "movie picks", "The home screen rows and title recommendations.", "https://help.netflix.com/en/node/100639", "Netflix"], ["Spotify", "music picks", "The weekly “Discover Weekly” playlist.", "https://newsroom.spotify.com/?p=13145", "Spotify"]], "remap": [["Cars", "360° camera", "Straightens four fisheye views and stitches them into a top-down view.", "https://ti.com/lit/pdf/spry270", "Texas Instruments"], ["Phones", "ultra-wide", "Corrects stretched faces at the edges of wide-angle photos.", "https://research.google/pubs/distortion-free-wide-angle-portrait-on-camera-phone/", "Google Research"], ["VR headsets", "Meta Quest", "Warps every frame to match the lens so the image looks sharp.", "https://developers.meta.com/horizon/documentation/unity/os-compositor/", "Meta"], ["Security cameras", "fisheye", "Turns a ceiling camera’s round view into normal views.", "https://www.axis.com/en-au/for-developers/axis-dewarping-sdk", "Axis"], ["Drones", "aerial photos", "Corrects lens distortion in aerial photos.", "https://www.github.com/dronemapper-io/dji-dewarp", "DJI dewarp"]], "kereses": [["Amazon", "online store", "At the Prime Day peak, every product page, cart and order is a fast lookup.", "https://aws.amazon.com/blogs/aws/all-the-numbers-amazon-prime-day-2026-powered-by-aws/", "AWS"], ["Uber", "finding cars", "Finds the cars closest to you by map cell.", "https://www.uber.com/gb/en/blog/h3/", "Uber"], ["Every website", "opening a page", "Your browser looks up the server address for the site name.", "https://developers.cloudflare.com/1.1.1.1/", "Cloudflare"], ["Passwords", "security", "Leaked passwords are checked against a list of hundreds of millions.", "https://haveibeenpwned.com/Passwords", "Have I Been Pwned"], ["Online games", "leaderboards", "Your rank comes from a sorted list in real time.", "https://redis.io/solutions/use-cases/leaderboards/", "Redis"]], "bfs": [["Facebook", "News Feed", "Walks from your friends to their posts and builds your feed.", "https://engineering.fb.com/2013/06/25/core-infra/tao-the-power-of-the-graph/", "Meta"], ["LinkedIn", "connection degree", "The “2nd-degree connection” label comes from walking the network.", "https://engineering.linkedin.com/blog/2023/how-liquid-connects-everything-so-our-members-can-do-anything", "LinkedIn"], ["Banks", "fraud detection", "Uncovers suspicious accounts linked by shared phones and addresses.", "https://neo4j.com/blog/fraud-detection/fighting-financial-fraud-with-graph-technology/", "Neo4j"], ["Navigation", "route planning", "Searches the road network for the best route.", "https://research.google/blog/efficient-partitioning-of-road-networks/", "Google Research"], ["Google Search", "new pages", "Finds new pages by following links across the web.", "https://developers.google.com/search/docs/fundamentals/how-search-works", "Google"]], "redis": [["X (Twitter)", "timeline", "Your timeline is served from here, at 39 million requests per second.", "https://highscalability.com/how-twitter-uses-redis-to-scale-105tb-ram-39mm-qps-10000-ins/", "High Scalability"], ["Instagram", "photos", "Links each photo to its uploader, across hundreds of millions of entries.", "https://instagram-engineering.com/storing-hundreds-of-millions-of-simple-key-value-pairs-in-redis-1091ae80f74c", "Instagram"], ["Uber", "trips", "Serves trip data at 40 million reads per second.", "https://www.uber.com/gb/en/blog/how-uber-serves-over-40-million-reads-per-second-using-an-integrated-cache/", "Uber"], ["Pinterest", "follows", "Who follows whom and what: billions of relationships.", "https://blogs.vmware.com/tanzu/using-redis-at-pinterest-for-billions-of-relationships/", "Pinterest"], ["Online stores", "shopping cart", "Your cart and login are fetched here on every click.", "https://redis.io/solutions/use-cases/session-store/", "Redis"]], "tf": [["Google Nest", "camera", "Tells people apart from pets.", "https://blog.google/products/google-nest/ask-techspert-how-do-nest-cams-know-people-pets/", "Google"], ["Google Meet", "video calls", "Blurs your background, right in the browser.", "https://research.google/blog/background-features-in-google-meet-powered-by-web-ml/", "Google Research"], ["Google Translate", "camera", "Translates signs live in the camera view.", "https://blog.google/products/translate/google-translates-instant-camera-translation-gets-upgrade/", "Google"], ["Pixel phones", "photos", "Photo processing and recognition run on the phone.", "https://developers.googleblog.com/en/litert-the-universal-framework-for-on-device-ai/", "Google"], ["Smart devices", "battery camera", "A tiny camera that signals when a person enters the view.", "https://blog.tensorflow.org/2019/10/visual-wake-words-with-tensorflow-lite_30.html", "TensorFlow"]]};
+const STAT={"masolas": ["4–5%", "of CPU time", "in Google’s data centers; up to 66% in Redis, web servers and video encoding", "https://ipads.se.sjtu.edu.cn/_media/pub/sosp25-copier-preprint.pdf", "SOSP 2025"], "kereses": ["192 million", "lookups/s", "in Amazon’s database, on peak days", "https://aws.amazon.com/blogs/aws/all-the-numbers-amazon-prime-day-2026-powered-by-aws/", "AWS"], "redis": ["35 billion", "requests/s", "in Amazon’s Redis cache, on peak days", "https://aws.amazon.com/blogs/aws/all-the-numbers-amazon-prime-day-2026-powered-by-aws/", "AWS"], "embedding": ["1 billion", "ads/s", "scored by Meta’s ad retrieval", "https://engineering.fb.com/2026/10/28/ml-applications/meta-andromeda-next-gen-ads-retrieval-gpu-co-design/", "Meta"], "bfs": ["1 billion", "reads/s", "on Facebook’s social graph (latest published figure, 2013)", "https://engineering.fb.com/2013/06/25/core-infra/tao-the-power-of-the-graph/", "Meta"], "remap": ["63,000", "photos/s", "worldwide, 94% taken on phones", "https://petapixel.com/2025/06/18/the-number-of-photos-taken-in-2025-is-expected-to-exceed-two-trillion", "PetaPixel"], "bejaras": ["8 hours", "of video/s", "uploaded to YouTube", "https://digiday.com/marketing/as-youtube-turns-20-here-are-the-numbers-you-need-to-know", "Digiday"], "tf": ["Billions", "of users", "across 250K+ apps (LiteRT)", "https://developers.google.com/edge/litert", "Google"]};
+function appsBox(id){const a=APPS[id];if(!a)return"";const st=STAT[id];return `<div class="hB"><div class="stdk">Where it is used</div>${st?`<div class="stat"><span class="sn">${st[0]}</span><span class="su">${st[1]}</span><span class="sd">${st[2]} · <a href="${st[3]}" target="_blank" rel="noopener">${st[4]} ↗</a></span></div>`:""}<div class="tiles">${a.map(([n,k,d,u,src])=>`<a class="tile" href="${u}" target="_blank" rel="noopener"><span class="tn">${n}</span><span class="tk">${k}</span><span class="td">${d}</span><span class="ts">${src} ↗</span></a>`).join("")}</div></div>`}
+function taskPage(t){
+  CUR=t;
+  let h=`<div class="eyebrow">Workload</div><h1>${t.title}</h1><p class="lede">${t.what}</p>
+  <div class="stdbox"><div class="stdk">Standard code</div><div class="stdv">${t.std}</div>${t.use?`<div class="stdu">${t.use}</div>`:""}<div class="stdn">Extracted unmodified; its output is bit-exact with the original package, and every platform runs this same code.</div></div>${appsBox(t.id)}
+  <h2>The BSMC advantage</h2>${consList(t)}`;
+  if(t.custom)h+=t.custom();
+  for(const s0 of t.sets){
+    const {rows,val,lb,b}=mk(t,s0);
+    h+=`${H2(s0.key)}<div class="grid2">`;
+    h+=`<div class="panel"><h3>Throughput <span class="info" tabindex="0" role="button" aria-label="Explanation"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="currentColor" opacity=".16"/><circle cx="8" cy="4.6" r="1.15" fill="currentColor"/><rect x="7" y="6.9" width="2" height="5.4" rx="1" fill="currentColor"/></svg><span class="tip" role="tooltip">${s0.unit}${M==="abs"?"":", all at 5.5 GHz"}, ${S==="lin"?"linear":"logarithmic"} scale. Longer bar = more.${M==="clk"&&s0.cap?" DDR5 cap here: "+nf(s0.cap)+" "+s0.unit+" [C]. "+DDR5:""}</span></span></h3>${logBars(rows.map(r=>({label:lb(r),v:val(r),c:P[r[0]].c})),{unit:s0.unit})}</div>`;
+    if(b){const bv=val(b);
+      h+=`<div class="panel"><h3>BSMC advantage <span class="info" tabindex="0" role="button" aria-label="Explanation"><svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><circle cx="8" cy="8" r="8" fill="currentColor" opacity=".16"/><circle cx="8" cy="4.6" r="1.15" fill="currentColor"/><rect x="7" y="6.9" width="2" height="5.4" rx="1" fill="currentColor"/></svg><span class="tip" role="tooltip">BSMC divided by the platform. Green: BSMC ahead. Red: CPU ahead.</span></span></h3>${divBars(rows.map(r=>r[0]==="bsmc"?{label:lb(r),ref:true,c:"bsmc"}:{label:lb(r),v:val(r)==null?null:bv/val(r),c:r[0]}),{span:3})}</div>`;}
+    h+=`</div>`;
+  }
+  if(t.extra)h+=`<p class="note" style="margin-top:14px">${t.extra}</p>`;
+
+  return h;
+}
+
+/* ---------- CPU + BSMC page: CPU time the BSMC frees (Cambridge Architecture) ---------- */
+// row: [task, subtitle, share A, share B, total text, speedup text]
+const CPUX=[
+ {c:"a72",name:"ARM A72",hz:"1.4 GHz",tip:"Same A72 core, same code, once alone and once with the 100 MHz version of the BSMC. The full task time is measured; the numbers are the same as on the task pages. The blue/green split for remap and Redis GET uses the proportions of the earlier detailed measurement and is indicative.",
+  rows:[
+   ["Remap, random map","Full HD frame",0.73,0.10,"83%","5.8x"],
+   ["Embedding","10 M-row table, 128 B rows",null,0.71,"71%","3.5x"],
+   ["64×64 tile","512 MB table",null,0.66,"66%","2.9x"],
+   ["4 KB stride","512 MB table, 4 B elements",null,0.65,"65%","2.8x"],
+   ["Redis GET","Redis 7.2.6",0.51,0.09,"60%","2.5x"],
+   ["Fill (FILL)","full task",null,0.52,"52%","2.1x"],
+   ["Copy (COPY)","full task",null,0.52,"52%","2.1x"]],
+  note:"With the BSMC, one A72 core does <b>the work of 2-6 cores</b>: 5.8 in remap, 2.5 in Redis GET."},
+ {c:"riscv",name:"RISC-V",hz:"50 MHz",tip:"Same RISC-V core on the same board, once alone and once with the BSMC. Total task time is measured. This core has no cache, so the two parts are shown combined.",
+  rows:[
+   ["Copy (COPY)","full task",null,0.997,"99.7%","348x"],
+   ["Fill (FILL)","full task",null,0.993,"99.3%","134x"],
+   ["TF CNN (image recognition)","full frame",null,0.82,"82%","5.6x"],
+   ["STREAM (ADD, TRIAD)","CPU does the arithmetic",null,0.75,"71-78%","3.4-4.5x"]]}
+];
+function cpuPage(){
+  let ticks="";
+  for(let q=0;q<=4;q++)ticks+=`<i class="tick" style="left:${q*25}%"></i>`;
+  const sc=`<span style="left:0%">0%</span><span style="left:50%">50%</span><span style="left:100%">100%</span>`;
+  const KW="var(--bsmc)",KC="var(--good)",KT="color-mix(in srgb,var(--good) 70%,var(--bsmc))";
+  let h=`<div class="eyebrow">Cambridge Architecture®</div><h1>The CPU computes, the memory leads</h1>
+  <p class="lede">The BSMC implements the <b>Cambridge Architecture®</b>: the CPU is the compute engine, and the memory directs the work. With the BSMC, the CPU gains two things:</p>
+  <ul class="cons" style="margin-top:6px">
+   <li><b>No waiting for data:</b> the data is there when the CPU needs it. With full integration this is <b>Zero Latency Memory (ZLM)</b>: the BSMC hides the entire memory latency from the CPU.</li>
+   <li><b>No data preparation:</b> the CPU no longer has to prepare the next piece of data. Only the task's own computation remains.</li>
+  </ul>
+  <p>Each bar shows the share of CPU time the BSMC frees up. The speedup is shown under the workload name.</p>
+  <div class="legend"><span><i class="sw" style="background:${KW}"></i>data access</span><span><i class="sw" style="background:${KC}"></i>data preparation</span><span><i class="sw" style="background:${KT}"></i>both combined</span></div>`;
+  for(const p of CPUX){
+    h+=`<div class="h2row"><h2><b>${p.name}</b> <span class="hz">${p.hz}</span> + BSMC ${INFO(p.tip)}</h2></div><div class="panel"><div class="chart bands">`;
+    for(const r of p.rows){
+      const ww=r[2]==null?0:r[2]*100,wc=r[3]*100,tot=ww+wc,inside=tot>40;
+      const bars=r[2]==null?`<div class="bar" style="width:${wc}%;background:${KT}"></div>`:`<div class="bar" style="width:${ww}%;background:${KW};border-radius:3px 0 0 3px"></div><div class="bar" style="left:${ww}%;width:${wc}%;background:${KC};border-radius:0 3px 3px 0"></div>`;
+      const split=r[2]==null?"":`<span class="sz"> (${Math.round(ww)}% + ${Math.round(wc)}%)</span>`;
+      h+=`<div class="row tinted t-${p.c}"><div class="lbl"><b>${r[0]}</b><br><span class="muted">${r[1]} · <b>${r[5]}</b> faster</span></div><div class="track">${ticks}${bars}<span class="val" style="${inside?`right:${100-tot}%;color:#fff`:`left:${tot}%`}"><b>${r[4]}</b>${split}</span></div></div>`;
+    }
+    h+=`<div class="axis"><div></div><div class="scale">${sc}</div></div></div>${p.note?`<p class="note" style="margin-top:10px">${p.note}</p>`:""}</div>`;
+  }
+  return h;
+}
+
+
+function methodPage(){
+  const PL=[
+   ["bsmc","BSMC","50 / 100 MHz","in this test",["On FPGA, AMD Versal VPK120 board","Three 64 KB Yonder® SmartCache units (192 KB in total)","Three LPDDR4 memories"]],
+   ["riscv","RISC-V","50 MHz","1 core",["On the same FPGA, next to the BSMC","No cache, no floating-point unit"]],
+   ["a72","ARM Cortex-A72","1.4 GHz","1 core",["The Versal chip's built-in CPU","Bare metal, caches enabled"]],
+   ["ryzen","AMD Ryzen 9 7950X","5.5 GHz","measured: 5.57 / 5.41 GHz (1 / 16 cores)",["16 cores, 64 MB L3 cache, dual-channel DDR5","Ubuntu, gcc -O3 -march=native, stock system settings"]]
+  ];
+  return `<div class="eyebrow">Methodology</div><h1>How we measured</h1>
+  <p class="lede">The tests measure <b>data access</b>, not the compute capacity of the CPUs. The selected workloads are <b>widely used data-handling tasks with almost no computation</b>, the kind that hold back today's computers. Every platform runs the same C code on the same data. Outputs are compared by checksum and are bit-exact across platforms and code levels.</p>
+  <h2>Platforms</h2>
+  <div class="specs">${PL.map(([k,n,c,cs,li])=>`<div class="spec panel tinted t-${k}"><div class="spec-h"><h3>${n}</h3><div class="spec-c">${c}<small>${cs}</small></div></div><ul>${li.map(x=>`<li>${x}</li>`).join("")}</ul></div>`).join("")}</div>
+  <h2>Code levels</h2>
+  <p>The BSMC is compared against <b>the fastest code on each CPU</b>: whichever of the three levels gave the best result on that platform. The charts show under each platform name which code ran. The BSMC runs the BSMC version of the task.</p>
+  <dl class="defs">
+   <dt>Naive</dt><dd>The core of the task in simple, portable C, without platform-specific optimization.</dd>
+   <dt>Optimized</dt><dd>The naive code tuned for the platform: SIMD (Ryzen AVX2/VNNI, A72 NEON), software prefetching, multithreading.</dd>
+   <dt>Standard</dt><dd>The relevant function of a widely used package, extracted unmodified (OpenCV, FBGEMM, Redis, GAP, TensorFlow Lite Micro, stream.c). Output is bit-exact with the original package.</dd>
+   <dt>BSMC</dt><dd>The same task: the BSMC handles data access, the CPU does the computation. On the test board that CPU is the RISC-V. Since the tests measure data access, rows marked “gather” show BSMC data access; the full task (data access and computation together) is listed separately.</dd>
+  </dl>
+  <h2>Measurement rules</h2>
+  <dl class="defs">
+   <dt>Repetition</dt><dd>Every value is the best of three runs.</dd>
+   <dt>Cache</dt><dd>Every run gets a fresh, random request stream. Caches accelerate repeated access, but in workloads on large datasets data is rarely reused. The measurement reflects this real-world situation.</dd>
+   <dt>Verification</dt><dd>Every output is checked against the reference by checksum.</dd>
+  </dl>
+  <h2>Views</h2>
+  <dl class="defs">
+   <dt>Absolute</dt><dd>Measured throughput per second, each platform at its own clock.</dd>
+   <dt>Per clock <span class="tag">[C]</span></dt><dd>All platforms at 5.5 GHz: measured throughput scaled linearly with clock, capped at the measured limit of the Ryzen's DDR5 memory (684 M cache lines/s random, 54-70 GB/s sequential). On the Remap page the common clock is 1.4 GHz and the cap is the board's LPDDR4 memory.</dd>
+   <dt>No memory cap <span class="tag">[C]</span></dt><dd>The same without a memory cap, e.g. with HBM: only the number of requests counts. The Ryzen (16 cores) value is then 16 times the single-core value.</dd>
+  </dl>
+  <h2>Notation</h2>
+  <dl class="defs">
+   <dt><span class="tag">[M]</span></dt><dd>Measured value (the default when unmarked).</dd>
+   <dt><span class="tag">[C]</span></dt><dd>Calculated from measured values.</dd>
+   <dt><span class="tag">[E]</span></dt><dd>Estimate.</dd>
+  </dl>`;
+}
+
+/* ---------- race (hero) ---------- */
+const RACE={
+ redis:{n:"Redis GET",u:"GET",cap:171,rows:[["bsmc",3.0,100],["ryzen",3.95],["ryzen16",49.4],["a72",1.20],["riscv",0.019]]},
+ hash:{n:"Hash lookup",u:"lookups",cap:684,rows:[["bsmc",80.1],["ryzen",113.7],["ryzen16",624.8],["a72",21.5],["riscv",0.724]]},
+ bfs:{n:"Graph traversal",u:"edges",cap:684,rows:[["bsmc",65.5],["ryzen",380.2],["a72",29.6],["riscv",1.17]]},
+ remap:{n:"Remap, random",u:"pixels",cap:342,rows:[["bsmc",101,100],["a72",17.4],["riscv",0.44]]}
+};
+const HC={bsmc:"#5b93f5",ryzen:"#c49bff",ryzen16:"#a98ae0",a72:"#95d600",riscv:"#f2b826"};
+let race={t:"redis",m:"real",dots:[],acc:{},raf:0,last:0,cnt:{}};
+function raceRates(){const R=RACE[race.t];const at=(k,v,m)=>v*GHZ/(m||P[k].mhz);const r1=(R.rows.find(r=>r[0]==="ryzen")||[0,0])[1];return byOrd(R.rows).map(([k,v,m])=>[k,k==="bsmc"?v*YK():v,m]).map(([k,v,m])=>({k,m,v:race.m==="real"?v:race.m==="ideal"?(k==="ryzen16"?16*at("ryzen",r1):at(k,v,m)):Math.min(at(k,v,m),Math.max(R.cap,v))}))}
+function raceCaption(){
+  const R=RACE[race.t],rs=raceRates(),b=rs[0].v;
+  const nm=k=>`<b style="color:${HC[k]}">${P[k].n}</b>`;
+  const head=race.m==="real"?"Real speed":race.m==="ideal"?"All at 5.5 GHz, no memory cap":"All at 5.5 GHz, DDR5 cap";
+  document.getElementById("rcap").innerHTML=`<div><span class="rh">${head}, M ${R.u}/s</span>${rs.map(r=>`<span class="it">${nm(r.k)} ${nf(r.v)}</span>`).join("")}</div><div><span class="rh">BSMC advantage</span>${rs.slice(1).map(r=>`<span class="it">${nm(r.k)} ${xf(b/r.v)}</span>`).join("")}</div>`;
+}
+function raceStart(){
+  const cv=document.getElementById("race");if(!cv)return;
+  const ctx=cv.getContext("2d");
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function size(){const w=cv.clientWidth||600,dpr=devicePixelRatio||1,h=Math.round(Math.max(210,Math.min(260,w*0.34)));cv.width=w*dpr;cv.height=h*dpr;cv.style.height=h+"px";ctx.setTransform(dpr,0,0,dpr,0,0);race.W=w;race.H=h}
+  size();addEventListener("resize",size);
+  race.m=M==="abs"?"real":M;race.dots=[];race.acc={};race.cnt={};
+  cancelAnimationFrame(race.raf);race.last=performance.now();
+  function frame(now){
+    if(!document.getElementById("race"))return;
+    const dt=Math.min(0.05,(now-race.last)/1000);race.last=now;
+    const rs=raceRates(),max=Math.max(...rs.map(r=>r.v));
+    const W=race.W,H=race.H,labW=Math.min(150,W*0.3),laneH=(H-10)/rs.length,x0=labW+8,x1=W-8;
+    ctx.clearRect(0,0,W,H);
+    rs.forEach((r,i)=>{
+      const y=5+laneH*i+laneH/2, rate=r.v/max*46; // dots per second shown
+      ctx.fillStyle="#15232b";ctx.fillRect(x0,y-laneH*0.32,x1-x0,laneH*0.64);
+      if(!reduce){race.acc[r.k]=(race.acc[r.k]||0)+rate*dt;while(race.acc[r.k]>=1){race.acc[r.k]-=1;race.dots.push({k:r.k,i,x:x0,j:(Math.random()-.5)*laneH*0.4})}}
+      ctx.fillStyle=HC[r.k];ctx.font="600 13px 'IBM Plex Sans Condensed',sans-serif";ctx.textBaseline="middle";
+      ctx.fillText(P[r.k].n,4,y-8);
+      ctx.fillStyle="#8fa2ad";ctx.font="500 12px 'IBM Plex Mono',monospace";
+      ctx.fillText(nf(r.v)+" M/s"+(race.m!=="real"?"":r.m?` · ${r.m} MHz`:r.k==="bsmc"||r.k==="riscv"?" · 50 MHz":r.k==="a72"?" · 1.4 GHz":" · 5.5 GHz"),4,y+9);
+      if(reduce){const w=Math.max(2,(x1-x0)*Math.log10(1+r.v/max*999)/3);ctx.fillStyle=HC[r.k];ctx.fillRect(x0,y-laneH*0.2,w,laneH*0.4)}
+    });
+    if(!reduce){
+      const sp=(x1-x0)/1.6;
+      race.dots=race.dots.filter(d=>{d.x+=sp*dt;if(d.x>x1){race.cnt[d.k]=(race.cnt[d.k]||0)+1;return false}const y=5+laneH*d.i+laneH/2+d.j;ctx.fillStyle=HC[d.k];ctx.beginPath();ctx.arc(d.x,y,3.2,0,6.283);ctx.fill();return true});
+    }
+    race.raf=requestAnimationFrame(frame);
+  }
+  race.raf=requestAnimationFrame(frame);
+  document.querySelectorAll("[data-rt]").forEach(b=>b.onclick=()=>{race.t=b.dataset.rt;race.dots=[];race.acc={};document.querySelectorAll("[data-rt]").forEach(x=>x.setAttribute("aria-pressed",x===b));raceCaption()});
+  raceCaption();
+  // prefill so the first frame is not empty
+  if(!reduce){const rs=raceRates(),max=Math.max(...rs.map(r=>r.v));rs.forEach((r,i)=>{const n=Math.round(r.v/max*46*1.6);for(let j=0;j<n;j++)race.dots.push({k:r.k,i,x:0,j:0,pre:j/n})})}
+  race.dots.forEach(d=>{if(d.pre!=null){const W=race.W,labW=Math.min(150,W*0.3),x0=labW+8,x1=W-8,laneH=(race.H-10)/raceRates().length;d.x=x0+(x1-x0)*d.pre;d.j=(Math.random()-.5)*laneH*0.4;delete d.pre}});
+}
+document.addEventListener("DOMContentLoaded",()=>{});
+
+/* ---------- router ---------- */
+const PAGES=[{id:"attekintes",nav:"Overview",r:overview},{id:"cpu",nav:"CPU + BSMC",r:cpuPage},...T.map(t=>({id:t.id,nav:t.nav,r:()=>taskPage(t)})),{id:"modszer",nav:"Methodology",r:methodPage}];
+document.getElementById("nav").innerHTML=PAGES.map(p=>`<a href="#${p.id}" data-id="${p.id}">${p.nav}</a>`).join("");
+function show(keep){
+  const id=(location.hash||"").slice(1);
+  const pg=PAGES.find(p=>p.id===id)||PAGES[0];
+  const i=PAGES.indexOf(pg), prev=PAGES[i-1], next=PAGES[i+1];
+  CUR=null;
+  document.getElementById("main").innerHTML=pg.r()+`<footer>${pg.id==="modszer"?"All numbers measured on hardware (2026-11-19), except [C] calculated and [E] estimated values.":""}<div style="display:flex;justify-content:space-between;gap:12px;margin-top:10px">${prev?`<a href="#${prev.id}">← ${prev.nav}</a>`:"<span></span>"}${next?`<a href="#${next.id}">${next.nav} →</a>`:""}</div><div style="margin-top:14px;text-align:center">© 2026 Blueshift Memory</div></footer>`;
+  document.querySelectorAll("#nav a").forEach(a=>a.toggleAttribute("aria-current",a.dataset.id===pg.id)||a.removeAttribute("aria-current"));
+  document.querySelectorAll("#nav a").forEach(a=>{if(a.dataset.id===pg.id)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
+  document.querySelectorAll(".info .tip").forEach(t=>{if(t.dataset.split)return;t.dataset.split=1;t.innerHTML=t.innerHTML.split(/(?<=[.!?:])\s+(?=[A-Z“])/).map(x=>`<span class="ln">${x}</span>`).join("")});
+  colorBrands(document.getElementById("main"));
+  if(pg.id==="attekintes"){raceStart();}else{cancelAnimationFrame(race.raf)}
+  document.querySelectorAll("[data-mode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===M));
+  if(!keep)window.scrollTo(0,0);
+}
+
+const BRRE=/\b(AMD Ryzen|Ryzen|RISC-V|Cortex-A72|A72|ARM)(?![A-Za-z0-9])/g;
+function colorBrands(root){
+  if(!root)return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{const p=n.parentElement;if(!p||p.closest("svg,script,style,nav,button,.br,.val,.scale"))return NodeFilter.FILTER_REJECT;BRRE.lastIndex=0;return BRRE.test(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT}});
+  const ns=[];
+  while(w.nextNode())ns.push(w.currentNode);
+  for(const n of ns){
+    const f=document.createDocumentFragment();
+    let last=0;
+    const t=n.nodeValue;
+    BRRE.lastIndex=0;
+    for(const m of t.matchAll(BRRE)){
+      if(m.index>last)f.appendChild(document.createTextNode(t.slice(last,m.index)));
+      const sp=document.createElement("span");
+      const k=/Ryzen/.test(m[1])?"ryzen":m[1]==="RISC-V"?"riscv":"a72";
+      sp.className="br br-"+k;
+      sp.textContent=m[1];
+      f.appendChild(sp);
+      last=m.index+m[1].length;
+    }
+    if(last<t.length)f.appendChild(document.createTextNode(t.slice(last)));
+    n.replaceWith(f);
+  }
+}
+addEventListener("hashchange",()=>{M="clk";S="lin";Y=3;show()});
+function fitTip(e){const i=e.target.closest&&e.target.closest(".info");if(!i)return;const t=i.querySelector(".tip");t.style.left="";t.style.right="";requestAnimationFrame(()=>{const r=t.getBoundingClientRect(),over=r.right-(document.documentElement.clientWidth-16);if(over>0)t.style.left=(parseFloat(getComputedStyle(t).left)-over)+"px"})}
+document.addEventListener("mouseover",fitTip);document.addEventListener("focusin",fitTip);
+document.addEventListener("click",e=>{const b=e.target.closest("[data-y]");if(!b)return;Y=+b.dataset.y;show(true)});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-scale]");if(!b)return;S=b.dataset.scale;try{localStorage.setItem("bsmc-scale",S)}catch(_){}show(true)});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-mode]");if(!b)return;M=b.dataset.mode;try{localStorage.setItem("bsmc-mode2",M)}catch(_){}show(true)});
+show();
+</script>
